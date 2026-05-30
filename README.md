@@ -8,6 +8,15 @@
 ![WordPress](https://img.shields.io/badge/WordPress-6.5+-21759B?logo=wordpress)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql)
 
+### 🌐 Live Demo
+
+| Component | URL |
+|-----------|-----|
+| **Vue Frontend** | [https://beneficial-purpose-production-fc68.up.railway.app](https://beneficial-purpose-production-fc68.up.railway.app) |
+| **Laravel API** | [https://notes-laravel-vue-production.up.railway.app/api](https://notes-laravel-vue-production.up.railway.app/api) |
+
+> Deployed on **Railway** — PHP 8.2, Laravel 12, MySQL
+
 ---
 
 ## 📋 Table of Contents
@@ -21,7 +30,6 @@
 - [Challenge 4 — PHP Bug Hunt](#challenge-4--php-bug-hunt-bonus)
 - [Architecture Decisions](#-architecture-decisions)
 - [Testing](#-testing)
-- [Deploy ke Railway](#-deploy-ke-railway)
 
 ---
 
@@ -341,119 +349,6 @@ curl -X POST localhost:8000/api/notes \
 curl localhost:8000/api/notes \
   -H "Authorization: Bearer <TOKEN>"
 ```
-
----
-
-## 🚢 Deploy ke Railway
-
-Monorepo ini bisa di-deploy ke [Railway](https://railway.app) sebagai **2 service** dalam 1 project.
-
-### Struktur Deployment
-
-```
-Railway Project: notes-laravel-vue
-├── Service: laravel-api     (PHP 8.2 + MySQL)
-└── Service: vue-frontend    (Node.js 18)
-```
-
-### Step-by-Step
-
-#### 1. Siapkan Railway Project
-
-```bash
-# Install Railway CLI (opsional)
-npm i -g @railway/cli
-
-# Login
-railway login
-
-# Init project di root repo
-railway init
-```
-
-#### 2. Deploy Laravel API
-
-Di **Railway Dashboard** → New Project → **Deploy from GitHub repo**:
-
-| Setting | Value |
-|---------|-------|
-| **Root Directory** | `laravel-api` |
-| **Build Command** | `composer install --no-dev --optimize-autoloader` |
-| **Start Command** | `php -S 0.0.0.0:${PORT:-8000} -t public/ public/router.php` |
-
-> Railway auto-detect PHP + Composer via Nixpacks. `Procfile` sudah disediakan sebagai fallback.
-
-Tambahkan **MySQL** database dari Railway plugin, lalu set environment variables:
-
-```env
-APP_KEY=                    # Hasil dari php artisan key:generate --show
-APP_ENV=production
-APP_DEBUG=false
-
-DB_CONNECTION=mysql
-DB_HOST=${{MYSQLHOST}}
-DB_PORT=${{MYSQLPORT}}
-DB_DATABASE=${{MYSQLDATABASE}}
-DB_USERNAME=${{MYSQLUSER}}
-DB_PASSWORD=${{MYSQLPASSWORD}}
-
-SANCTUM_STATEFUL_DOMAINS=   # Kosongkan (token-only auth)
-SESSION_DOMAIN=
-```
-
-Lalu jalankan migration via Railway CLI:
-
-```bash
-railway run -s laravel-api -- php artisan migrate --force
-```
-
-#### 3. Deploy Vue Frontend
-
-Di project yang sama → **New Service** → **Deploy from GitHub repo**:
-
-| Setting | Value |
-|---------|-------|
-| **Root Directory** | `vue-frontend` |
-| **Build Command** | `npm install && npm run build` |
-| **Start Command** | `node server.js` |
-
-Set environment variable:
-
-```env
-VITE_API_BASE_URL=https://laravel-api.up.railway.app/api
-```
-
-> Ganti `laravel-api.up.railway.app` dengan domain Railway Laravel API kamu.
-
-#### 4. Setelah Deploy
-
-```bash
-# Cek status
-railway status
-
-# Buka dashboard
-railway open
-```
-
-- **Laravel API** → `https://laravel-api.up.railway.app/api`
-- **Vue Frontend** → `https://vue-frontend.up.railway.app`
-
-### File Deployment yang Sudah Disiapkan
-
-| File | Fungsi |
-|------|--------|
-| `laravel-api/Procfile` | Start command untuk Railway |
-| `laravel-api/public/router.php` | URL rewriting untuk PHP built-in server |
-| `vue-frontend/Procfile` | Start command untuk Railway |
-| `vue-frontend/server.js` | Express static server untuk production build |
-| `vue-frontend/package.json` | `express` dependency + `"start"` script |
-
-### Catatan Produksi
-
-- **Storage**: Railway menyediakan persistent volume untuk `storage/` — mount di `/app/storage`
-- **Logs**: `storage/logs/laravel.log` — auto-rotate via Laravel
-- **CORS**: `config/cors.php` sudah dikonfigurasi untuk production
-- **Asset Build**: Laravel tidak perlu `npm run build` — ini pure API, tanpa Blade views
 
 ---
 
