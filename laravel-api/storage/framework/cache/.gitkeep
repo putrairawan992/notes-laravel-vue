@@ -1,0 +1,4 @@
+<?php
+
+// Keep this directory, but keep it empty.
+// Laravel requires storage subdirectories to exist.

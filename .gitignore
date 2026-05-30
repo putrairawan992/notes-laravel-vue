@@ -1,0 +1,52 @@
+# ==============================================
+# Root .gitignore — Notes Laravel + Vue + WP
+# ==============================================
+
+# --- Node (Vue Frontend) ---
+node_modules/
+dist/
+.vite/
+
+# --- Laravel API ---
+laravel-api/vendor/
+laravel-api/.env
+laravel-api/.env.backup
+laravel-api/storage/framework/cache/data/*
+laravel-api/storage/framework/sessions/*
+laravel-api/storage/framework/views/*
+laravel-api/storage/logs/*
+!laravel-api/storage/framework/cache/data/.gitkeep
+!laravel-api/storage/framework/sessions/.gitkeep
+!laravel-api/storage/framework/views/.gitkeep
+!laravel-api/storage/logs/.gitkeep
+laravel-api/storage/*.key
+laravel-api/bootstrap/cache/*
+!laravel-api/bootstrap/cache/.gitkeep
+
+# --- WordPress Plugin ---
+# (tidak ada build artifacts — plugin pure PHP)
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- IDE ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# --- Environment ---
+.env
+.env.*
+!.env.example
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Build / Cache ---
+*.cache
+__pycache__/
