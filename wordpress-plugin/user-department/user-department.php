@@ -2,7 +2,7 @@
 /**
  * Plugin Name:  User Department
  * Description:  Adds a Department field to WordPress user profiles, displays it in the Users list table, and provides optional filtering and department management.
- * Version:      1.0.0
+ * Version:      1.1.0
  * Author:       D&O Creative Assessment
  * License:      GPL v2 or later
  * Text Domain:  user-department
@@ -189,23 +189,25 @@ class User_Department
     // -------------------------------------------------------------------------
 
     /**
-     * Get the current list of departments (custom + defaults merged).
+     * Get the current list of departments.
+     * Returns saved departments if they exist, otherwise seeds and returns defaults.
      *
      * @return array<string, string>
      */
     private function get_departments(): array
     {
-        $saved = get_option($this->option_key, []);
+        $saved = get_option($this->option_key, null);
 
         // If nothing saved yet, seed with defaults.
-        if (empty($saved)) {
+        if (! is_array($saved)) {
             update_option($this->option_key, $this->default_departments);
 
             return $this->default_departments;
         }
 
-        // Ensure we always have at least the defaults (in case admin clears them).
-        return array_merge($this->default_departments, $saved);
+        // Return saved departments as-is — admin has full control.
+        // Fall back to defaults only if saved list is completely empty.
+        return ! empty($saved) ? $saved : $this->default_departments;
     }
 
     // -------------------------------------------------------------------------
@@ -510,30 +512,87 @@ class User_Department
         (function() {
             const tbody = document.querySelector('#department-list-table tbody');
             const addBtn = document.getElementById('add-department-btn');
+            const optionKey = <?php echo wp_json_encode($this->option_key); ?>;
+
+            /**
+             * Escape a string for safe insertion as text content (prevents XSS).
+             *
+             * @param {string} str
+             * @returns {string}
+             */
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.appendChild(document.createTextNode(str));
+                return div.innerHTML;
+            }
+
+            /**
+             * Sanitize a department key: lowercase, only a-z, 0-9, underscores, hyphens.
+             *
+             * @param {string} str
+             * @returns {string}
+             */
+            function sanitizeKey(str) {
+                return str.toLowerCase().replace(/[^a-z0-9_\-]/g, '');
+            }
+
+            /**
+             * Collect all existing keys in the table to prevent duplicates.
+             *
+             * @returns {Set<string>}
+             */
+            function getExistingKeys() {
+                const keys = new Set();
+                tbody.querySelectorAll('input[type="text"]').forEach(function(input) {
+                    const match = input.name.match(/\[([^\]]+)\]$/);
+                    if (match) keys.add(match[1]);
+                });
+                return keys;
+            }
 
             addBtn.addEventListener('click', function() {
-                const key = prompt('<?php echo esc_js(__('Enter a unique key (lowercase, underscores):', 'user-department')); ?>');
-                if (!key) return;
+                const rawKey = prompt('<?php echo esc_js(__('Enter a unique key (lowercase, underscores):', 'user-department')); ?>');
+                if (rawKey === null || rawKey.trim() === '') return;
+
+                const key = sanitizeKey(rawKey.trim());
+                if (key === '') {
+                    alert('<?php echo esc_js(__('Invalid key. Use only lowercase letters, numbers, underscores, or hyphens.', 'user-department')); ?>');
+                    return;
+                }
+
+                if (getExistingKeys().has(key)) {
+                    alert('<?php echo esc_js(__('A department with that key already exists.', 'user-department')); ?>');
+                    return;
+                }
+
                 const label = prompt('<?php echo esc_js(__('Enter the display label:', 'user-department')); ?>');
-                if (!label) return;
+                if (label === null || label.trim() === '') return;
 
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <code>${key}</code>
-                    </td>
-                    <td>
-                        <input type="text"
-                               name="<?php echo esc_js($this->option_key); ?>[${key}]"
-                               value="${label}"
-                               class="regular-text" />
-                    </td>
-                    <td>
-                        <button type="button" class="button button-secondary remove-department">
-                            <?php echo esc_js(__('Remove', 'user-department')); ?>
-                        </button>
-                    </td>
-                `;
+
+                const tdKey = document.createElement('td');
+                const code = document.createElement('code');
+                code.textContent = key;
+                tdKey.appendChild(code);
+
+                const tdLabel = document.createElement('td');
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.name = optionKey + '[' + key + ']';
+                input.value = label.trim();
+                input.className = 'regular-text';
+                tdLabel.appendChild(input);
+
+                const tdAction = document.createElement('td');
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'button button-secondary remove-department';
+                btn.textContent = '<?php echo esc_js(__('Remove', 'user-department')); ?>';
+                tdAction.appendChild(btn);
+
+                row.appendChild(tdKey);
+                row.appendChild(tdLabel);
+                row.appendChild(tdAction);
                 tbody.appendChild(row);
             });
 
